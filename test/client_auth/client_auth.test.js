@@ -938,7 +938,7 @@ describe('client authentication options', () => {
         .expect(tokenAuthRejected)
         .expect(() => {
           expect(spy.calledOnce).to.be.true;
-          expect(errorDetail(spy)).to.equal('audience (aud) must equal the endpoint url, issuer identifier or token endpoint url');
+          expect(errorDetail(spy).split('.')[0]).to.equal('audience (aud) must equal the endpoint url, issuer identifier or token endpoint url');
         }));
     });
 
