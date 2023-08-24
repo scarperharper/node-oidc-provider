@@ -1,12 +1,22 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import { strict as assert } from 'node:assert';
 
-const config = cloneDeep(require('../default.config'));
+import { generateKeyPair } from 'jose';
+import merge from 'lodash/merge.js';
+
+import getConfig from '../default.config.js';
+
+const config = getConfig();
+
+export const keypair = await generateKeyPair('ES256');
 
 merge(config.features, {
   fapi: {
     enabled: true,
-    profile: '1.0 ID2',
+    profile(ctx, client) {
+      assert(ctx, 'ctx not provided in fapi.profile');
+      assert(client, 'client not provided in fapi.profile');
+      return '1.0 ID2';
+    },
   },
   jwtResponseModes: { enabled: true },
   requestObjects: {
@@ -15,10 +25,11 @@ merge(config.features, {
   },
 });
 config.enabledJWA = {
-  requestObjectSigningAlgValues: ['none'],
+  requestObjectSigningAlgValues: ['ES256'],
 };
+config.acceptQueryParamAccessTokens = true;
 
-module.exports = {
+export default {
   config,
   clients: [{
     client_id: 'client',
@@ -26,5 +37,8 @@ module.exports = {
     grant_types: ['implicit', 'authorization_code'],
     redirect_uris: ['https://client.example.com/cb'],
     token_endpoint_auth_method: 'none',
+    jwks: {
+      keys: [keypair.publicKey.export({ format: 'jwk' })],
+    },
   }],
 };

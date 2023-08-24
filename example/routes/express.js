@@ -1,12 +1,13 @@
-/* eslint-disable no-console, max-len, camelcase, no-unused-vars */
-const { strict: assert } = require('assert');
-const querystring = require('querystring');
-const { inspect } = require('util');
+/* eslint-disable no-console, camelcase, no-unused-vars */
+import { strict as assert } from 'node:assert';
+import * as querystring from 'node:querystring';
+import { inspect } from 'node:util';
 
-const isEmpty = require('lodash/isEmpty');
-const { urlencoded } = require('express'); // eslint-disable-line import/no-unresolved
+import isEmpty from 'lodash/isEmpty.js';
+import { urlencoded } from 'express'; // eslint-disable-line import/no-unresolved
 
-const Account = require('../support/account');
+import Account from '../support/account.js';
+import { errors } from '../../lib/index.js'; // from 'oidc-provider';
 
 const body = urlencoded({ extended: false });
 
@@ -19,10 +20,8 @@ const debug = (obj) => querystring.stringify(Object.entries(obj).reduce((acc, [k
 }, {}), '<br/>', ': ', {
   encodeURIComponent(value) { return keys.has(value) ? `<strong>${value}</strong>` : value; },
 });
-
-module.exports = (app, provider) => {
-  const { constructor: { errors: { SessionNotFound } } } = provider;
-
+const { SessionNotFound } = errors;
+export default (app, provider) => {
   app.use((req, res, next) => {
     const orig = res.render;
     // you'll probably want to use a full blown render engine capable of layouts
@@ -39,8 +38,7 @@ module.exports = (app, provider) => {
   });
 
   function setNoCache(req, res, next) {
-    res.set('Pragma', 'no-cache');
-    res.set('Cache-Control', 'no-cache, no-store');
+    res.set('cache-control', 'no-store');
     next();
   }
 
@@ -134,7 +132,6 @@ module.exports = (app, provider) => {
         grant.addOIDCClaims(details.missingOIDCClaims);
       }
       if (details.missingResourceScopes) {
-        // eslint-disable-next-line no-restricted-syntax
         for (const [indicator, scopes] of Object.entries(details.missingResourceScopes)) {
           grant.addResourceScope(indicator, scopes.join(' '));
         }

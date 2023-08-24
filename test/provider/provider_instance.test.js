@@ -1,7 +1,11 @@
-const { expect } = require('chai');
-const sinon = require('sinon');
+/* eslint-disable max-classes-per-file */
 
-const { Provider } = require('../../lib');
+import { strict as assert } from 'node:assert';
+
+import { expect } from 'chai';
+import sinon from 'sinon';
+
+import Provider from '../../lib/index.js';
 
 describe('provider instance', () => {
   context('draft/experimental spec warnings', () => {
@@ -84,6 +88,65 @@ describe('provider instance', () => {
     it('passes the options', () => {
       const provider = new Provider('http://localhost');
       expect(provider.urlFor('resume', { uid: 'foo' })).to.equal('http://localhost/auth/foo');
+    });
+  });
+
+  describe('adapters', () => {
+    const error = new Error('used this adapter');
+
+    it('can be a class', async () => {
+      const provider = new Provider('https://op.example.com', {
+        adapter: class {
+          // eslint-disable-next-line
+          async find() {
+            throw error;
+          }
+        },
+      });
+      await assert.rejects(provider.AccessToken.find('tokenValue'), {
+        message: 'used this adapter',
+      });
+      await assert.rejects(provider.Client.find('clientId'), {
+        message: 'used this adapter',
+      });
+    });
+
+    it('can be a class static function', async () => {
+      const provider = new Provider('https://op.example.com', {
+        adapter: (class {
+          // eslint-disable-next-line
+          static factory() {
+            // eslint-disable-next-line
+            return {
+              async find() {
+                throw error;
+              },
+            };
+          }
+        }).factory,
+      });
+      await assert.rejects(provider.AccessToken.find('tokenValue'), {
+        message: 'used this adapter',
+      });
+      await assert.rejects(provider.Client.find('clientId'), {
+        message: 'used this adapter',
+      });
+    });
+
+    it('can be an arrow function', async () => {
+      const provider = new Provider('https://op.example.com', {
+        adapter: () => ({
+          async find() {
+            throw error;
+          },
+        }),
+      });
+      await assert.rejects(provider.AccessToken.find('tokenValue'), {
+        message: 'used this adapter',
+      });
+      await assert.rejects(provider.Client.find('clientId'), {
+        message: 'used this adapter',
+      });
     });
   });
 });

@@ -1,12 +1,10 @@
-/* eslint-disable no-restricted-syntax, max-len, no-await-in-loop, no-plusplus */
-const { spawn } = require('child_process');
-
-let first = true;
+/* eslint-disable no-await-in-loop */
+import { spawn } from 'node:child_process';
 
 function pass({ mountTo, mountVia } = {}) {
   const child = spawn(
-    'c8',
-    [first ? '' : '--clean=false', 'npm', 'run', 'test'].filter(Boolean),
+    'npm',
+    ['run', 'test'],
     {
       stdio: 'inherit',
       shell: true,
@@ -19,8 +17,6 @@ function pass({ mountTo, mountVia } = {}) {
     },
   );
 
-  first = false;
-
   return new Promise((resolve, reject) => {
     child.on('close', (code) => {
       if (code === 0) {
@@ -32,38 +28,17 @@ function pass({ mountTo, mountVia } = {}) {
   });
 }
 
-function report() {
-  const child = spawn(
-    'c8',
-    ['report', '--reporter=lcov', '--reporter=text-summary'],
-    {
-      stdio: 'inherit',
-      shell: true,
-    },
-  );
-
-  return new Promise((resolve) => {
-    child.on('close', resolve);
-  });
-}
-
-(async () => {
+try {
   await pass();
 
   if (process.platform === 'linux' || !('CI' in process.env)) {
     const mountTo = '/oidc';
-    const frameworks = ['connect', 'express', 'fastify', 'koa'];
-
-    if (process.version.slice(1).split('.').map((x) => parseInt(x, 10))[0] >= 12) {
-      frameworks.push('hapi');
-    }
+    const frameworks = ['connect', 'express', 'koa', 'hapi', 'fastify'];
 
     for (const mountVia of frameworks) {
       await pass({ mountVia, mountTo });
     }
   }
-
-  await report();
-})().catch(() => {
+} catch {
   process.exitCode = 1;
-});
+}

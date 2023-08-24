@@ -1,10 +1,10 @@
-const { expect } = require('chai');
-const sinon = require('sinon');
+import { expect } from 'chai';
+import sinon from 'sinon';
 
-const bootstrap = require('../test_helper');
+import bootstrap from '../test_helper.js';
 
 describe('registration features', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   context('POST /reg', () => {
     it('generates the id, secret that does not expire and reg access token and returns the defaulted values', function () {
@@ -251,8 +251,7 @@ describe('registration features', () => {
         .send({
           redirect_uris: ['https://client.example.com/cb'],
         })
-        .expect('pragma', 'no-cache')
-        .expect('cache-control', 'no-cache, no-store');
+        .expect('cache-control', 'no-store');
     });
 
     it('stores the client and emits an event', function () {
@@ -327,17 +326,6 @@ describe('registration features', () => {
           this.provider.enable('registration', { initialAccessToken: undefined });
         });
 
-        it('allows reg calls with the access tokens as a Bearer token [query]', function () {
-          return this.agent.post('/reg')
-            .send({
-              redirect_uris: ['https://client.example.com/cb'],
-            })
-            .query({
-              access_token: 'foobar',
-            })
-            .expect(201);
-        });
-
         it('fails reg calls with the access tokens in application/json body', function () {
           return this.agent.post('/reg')
             .send({
@@ -400,17 +388,6 @@ describe('registration features', () => {
             const token = this.TestAdapter.for('InitialAccessToken').syncFind(jti);
             expect(token).to.have.property('exp');
           });
-        });
-
-        it('allows reg calls with the access tokens as a Bearer token [query]', function () {
-          return this.agent.post('/reg')
-            .send({
-              redirect_uris: ['https://client.example.com/cb'],
-            })
-            .query({
-              access_token: this.token,
-            })
-            .expect(201);
         });
 
         it('fails reg calls with the access tokens in application/json body', function () {
@@ -522,8 +499,7 @@ describe('registration features', () => {
     it('returns token-endpoint-like cache headers', function () {
       return this.agent.get(`/reg/${this.clientId}`)
         .auth(this.token, { type: 'bearer' })
-        .expect('pragma', 'no-cache')
-        .expect('cache-control', 'no-cache, no-store');
+        .expect('cache-control', 'no-store');
     });
 
     it('validates client is a valid client', function () {
@@ -567,8 +543,7 @@ describe('registration features', () => {
 
       return this.agent.get('/reg/foobar')
         .auth(this.token, { type: 'bearer' })
-        .expect('pragma', 'no-cache')
-        .expect('cache-control', 'no-cache, no-store')
+        .expect('cache-control', 'no-store')
         .expect(this.failWith(401, 'invalid_token', 'invalid token provided'))
         .expect(() => {
           expect(spy.calledOnce).to.be.true;

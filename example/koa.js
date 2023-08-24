@@ -1,18 +1,21 @@
 /* eslint-disable no-console */
 
-const path = require('path');
-const { promisify } = require('util');
+import * as path from 'node:path';
+import { promisify } from 'node:util';
 
-const Koa = require('koa');
-const render = require('koa-ejs');
-const helmet = require('helmet');
-const mount = require('koa-mount');
+import { dirname } from 'desm';
+import Koa from 'koa';
+import render from '@koa/ejs';
+import helmet from 'helmet';
+import mount from 'koa-mount';
 
-const { Provider } = require('../lib'); // require('oidc-provider');
+import Provider from '../lib/index.js'; // from 'oidc-provider';
 
-const Account = require('./support/account');
-const configuration = require('./support/configuration');
-const routes = require('./routes/koa');
+import Account from './support/account.js';
+import configuration from './support/configuration.js';
+import routes from './routes/koa.js';
+
+const __dirname = dirname(import.meta.url);
 
 const { PORT = 3000, ISSUER = `http://localhost:${PORT}` } = process.env;
 configuration.findAccount = Account.findAccount;
@@ -63,10 +66,10 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 let server;
-(async () => {
+try {
   let adapter;
   if (process.env.MONGODB_URI) {
-    adapter = require('./adapters/mongodb'); // eslint-disable-line global-require
+    ({ default: adapter } = await import('./adapters/mongodb.js'));
     await adapter.connect();
   }
 
@@ -77,8 +80,8 @@ let server;
   server = app.listen(PORT, () => {
     console.log(`application is listening on port ${PORT}, check its /.well-known/openid-configuration`);
   });
-})().catch((err) => {
-  if (server && server.listening) server.close();
+} catch (err) {
+  if (server?.listening) server.close();
   console.error(err);
   process.exitCode = 1;
-});
+}

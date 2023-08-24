@@ -1,7 +1,7 @@
-const { expect } = require('chai');
-const jose = require('jose2');
+import { expect } from 'chai';
+import { generateKeyPair } from 'jose';
 
-const { Provider } = require('../../lib');
+import Provider from '../../lib/index.js';
 
 describe('Provider declaring supported algorithms', () => {
   it('validates the configuration properties', () => {
@@ -28,19 +28,20 @@ describe('Provider declaring supported algorithms', () => {
     expect(() => {
       new Provider('https://op.example.com', { // eslint-disable-line no-new
         enabledJWA: {
-          tokenEndpointAuthSigningAlgValues: ['none'],
+          clientAuthSigningAlgValues: ['none'],
         },
       });
-    }).to.throw('unsupported enabledJWA.tokenEndpointAuthSigningAlgValues algorithm provided');
+    }).to.throw('unsupported enabledJWA.clientAuthSigningAlgValues algorithm provided');
   });
 
-  it('idTokenSigningAlgValues', () => {
+  it('idTokenSigningAlgValues', async () => {
+    const { privateKey } = await generateKeyPair('RS256');
     const provider = new Provider('https://op.example.com', {
       enabledJWA: {
         idTokenSigningAlgValues: ['HS256', 'RS256'],
       },
       jwks: {
-        keys: [jose.JWK.generateSync('RSA').toJWK(true)],
+        keys: [privateKey.export({ format: 'jwk' })],
       },
     });
 

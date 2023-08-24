@@ -1,21 +1,23 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import merge from 'lodash/merge.js';
 
-const config = cloneDeep(require('../default.config'));
+import getConfig from '../default.config.js';
+
+const config = getConfig();
 
 merge(config.features, {
   deviceFlow: { enabled: true },
   backchannelLogout: { enabled: true },
   claimsParameter: { enabled: true },
-  requestObjects: { request: false, requestUri: false },
+  requestObjects: { request: false, requestUri: true },
   rpInitiatedLogout: { enabled: false },
+  pushedAuthorizationRequests: { enabled: false },
 });
 
 config.extraParams = [
   'extra',
 ];
 
-module.exports = {
+export default {
   config,
   clients: [
     {

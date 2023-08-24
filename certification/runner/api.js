@@ -1,24 +1,24 @@
 /* eslint-disable no-await-in-loop */
-const { strict: assert } = require('assert');
-const { createWriteStream } = require('fs');
-const stream = require('stream');
-const { promisify } = require('util');
+import { strict as assert } from 'node:assert';
+import { createWriteStream, writeFileSync } from 'node:fs';
+import * as stream from 'node:stream';
+import { promisify } from 'node:util';
 
-const Got = require('got');
-const ms = require('ms');
+import got from 'got'; // eslint-disable-line import/no-unresolved
+import ms from 'ms';
+
+import debug from './debug.js';
 
 const pipeline = promisify(stream.pipeline);
 
-const debug = require('./debug');
-
 const FINISHED = new Set(['FINISHED']);
-const RESULTS = new Set(['REVIEW', 'PASSED', 'SKIPPED']);
+const RESULTS = new Set(['REVIEW', 'PASSED', 'WARNING', 'SKIPPED']);
 
 class API {
   constructor({ baseUrl, bearerToken } = {}) {
     assert(baseUrl, 'argument property "baseUrl" missing');
 
-    const { get, post } = Got.extend({
+    const { get, post } = got.extend({
       prefixUrl: baseUrl,
       throwHttpErrors: false,
       followRedirect: false,
@@ -27,14 +27,16 @@ class API {
         'content-type': 'application/json',
       },
       responseType: 'json',
-      retry: 0,
-      timeout: 10000,
+      retry: { limit: 0 },
+      https: {
+        rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
+      },
     });
 
     this.get = get;
     this.post = post;
 
-    this.stream = Got.extend({
+    this.stream = got.extend({
       prefixUrl: baseUrl,
       throwHttpErrors: false,
       followRedirect: false,
@@ -42,7 +44,10 @@ class API {
         ...(bearerToken ? { authorization: `bearer ${bearerToken}` } : undefined),
         'content-type': 'application/json',
       },
-      retry: 0,
+      retry: { limit: 0 },
+      https: {
+        rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
+      },
     }).stream;
   }
 
@@ -113,6 +118,12 @@ class API {
   async downloadArtifact({ planId } = {}) {
     assert(planId, 'argument property "planId" missing');
     const filename = `export-${planId}.zip`;
+    if (process.env.GITHUB_ENV) {
+      writeFileSync(process.env.GITHUB_ENV, `EXPORT_FILE=${filename}`, { flag: 'a' });
+    }
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      writeFileSync(process.env.GITHUB_STEP_SUMMARY, `\n\nArtifact: \`${filename}\``, { flag: 'a' });
+    }
     return pipeline(
       this.stream(`api/plan/exporthtml/${planId}`, {
         headers: { accept: 'application/zip' },
@@ -147,7 +158,7 @@ class API {
         throw new Error(`module id ${moduleId} is ${status}`);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, ms('2s')));
+      await new Promise((resolve) => { setTimeout(resolve, ms('2s')); });
     }
 
     debug(`module id ${moduleId} expected state timeout`);
@@ -155,4 +166,4 @@ class API {
   }
 }
 
-module.exports = API;
+export default API;

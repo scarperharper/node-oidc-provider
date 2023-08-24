@@ -1,25 +1,13 @@
-const { expect } = require('chai');
+import { expect } from 'chai';
 
-const bootstrap = require('../test_helper');
+import bootstrap from '../test_helper.js';
 
 describe('Client#add', () => {
-  before(bootstrap(__dirname, { config: 'client_secrets' }));
+  before(bootstrap(import.meta.url, { config: 'client_secrets' }));
 
-  it('client secret is mandatory if even one of the authz needs it', function () {
-    expect(this.provider.Client.needsSecret({
-      token_endpoint_auth_method: 'none',
-      revocation_endpoint_auth_method: 'none',
-      introspection_endpoint_auth_method: 'client_secret_basic',
-    })).to.be.true;
-    expect(this.provider.Client.needsSecret({
-      token_endpoint_auth_method: 'none',
-      revocation_endpoint_auth_method: 'client_secret_basic',
-      introspection_endpoint_auth_method: 'none',
-    })).to.be.true;
+  it('client secret is mandatory if client auth needs it', function () {
     expect(this.provider.Client.needsSecret({
       token_endpoint_auth_method: 'client_secret_basic',
-      revocation_endpoint_auth_method: 'none',
-      introspection_endpoint_auth_method: 'none',
     })).to.be.true;
   });
 });

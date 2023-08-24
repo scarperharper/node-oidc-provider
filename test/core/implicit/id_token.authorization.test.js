@@ -1,17 +1,17 @@
-const querystring = require('querystring');
-const url = require('url');
+import * as querystring from 'node:querystring';
+import * as url from 'node:url';
 
-const sinon = require('sinon');
-const { expect } = require('chai');
+import sinon from 'sinon';
+import { expect } from 'chai';
 
-const bootstrap = require('../../test_helper');
+import bootstrap from '../../test_helper.js';
 
 const route = '/auth';
 const response_type = 'id_token';
 const scope = 'openid';
 
 describe('IMPLICIT id_token', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   ['get', 'post'].forEach((verb) => {
     describe(`IMPLICIT id_token ${verb} ${route} with session`, () => {

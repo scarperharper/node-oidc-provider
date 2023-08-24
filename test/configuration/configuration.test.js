@@ -1,6 +1,6 @@
-const { expect } = require('chai');
+import { expect } from 'chai';
 
-const Configuration = require('../../lib/helpers/configuration');
+import Configuration from '../../lib/helpers/configuration.js';
 
 describe('Provider configuration', () => {
   it('checks that a feature configuration property is valid', () => {
@@ -33,13 +33,13 @@ describe('Provider configuration', () => {
           devInteractions: false,
         },
       });
-    }).to.throw('features are no longer enabled/disabled with a boolean value, please see the docs');
+    }).to.throw('Features are not enabled/disabled with a boolean value. See the documentation for more details.');
     expect(() => {
       new Configuration({ // eslint-disable-line no-new
         features: {
           devInteractions: true,
         },
       });
-    }).to.throw('features are no longer enabled/disabled with a boolean value, please see the docs');
+    }).to.throw('Features are not enabled/disabled with a boolean value. See the documentation for more details.');
   });
 });

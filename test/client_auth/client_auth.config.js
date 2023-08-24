@@ -1,19 +1,31 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import { X509Certificate } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
-const config = cloneDeep(require('../default.config'));
-const {
-  e, n, kid, kty, use,
-} = require('../client.sig.key');
-const mtlsKeys = require('../jwks/jwks.json');
+import cloneDeep from 'lodash/cloneDeep.js';
+import merge from 'lodash/merge.js';
+
+import key from '../client.sig.key.js';
+import getConfig from '../default.config.js';
+
+const mtlsKeys = JSON.parse(
+  readFileSync('test/jwks/jwks.json', {
+    encoding: 'utf-8',
+  }),
+);
+
+const config = getConfig();
 
 const clientKey = {
-  e, n, kid, kty, use,
+  e: key.e,
+  n: key.n,
+  kid: key.kid,
+  kty: key.kty,
+  use: key.use,
 };
 const rsaKeys = cloneDeep(mtlsKeys);
 rsaKeys.keys.splice(0, 1);
 
-config.tokenEndpointAuthMethods = [
+config.clientAuthMethods = [
   'none',
   'client_secret_basic',
   'client_secret_post',
@@ -29,18 +41,22 @@ merge(config.features, {
     selfSignedTlsClientAuth: true,
     tlsClientAuth: true,
     getCertificate(ctx) {
-      return ctx.get('x-ssl-client-cert');
+      try {
+        return new X509Certificate(Buffer.from(ctx.get('x-ssl-client-cert'), 'base64'));
+      } catch (e) {
+        return undefined;
+      }
     },
     certificateAuthorized(ctx) {
       return ctx.get('x-ssl-client-verify') === 'SUCCESS';
     },
-    certificateSubjectMatches(ctx, key, expected) {
-      return key === 'tls_client_auth_san_dns' && ctx.get('x-ssl-client-san-dns') === expected;
+    certificateSubjectMatches(ctx, property, expected) {
+      return property === 'tls_client_auth_san_dns' && ctx.get('x-ssl-client-san-dns') === expected;
     },
   },
 });
 
-module.exports = {
+export default {
   config,
   clients: [{
     token_endpoint_auth_method: 'none',
@@ -73,7 +89,7 @@ module.exports = {
   }, {
     token_endpoint_auth_method: 'client_secret_jwt',
     client_id: 'client-jwt-secret',
-    client_secret: 'its64bytes_____________________________________________________!',
+    client_secret: 'secret',
     grant_types: ['foo'],
     response_types: [],
     redirect_uris: [],

@@ -1,16 +1,17 @@
 /* eslint-disable no-param-reassign */
 
-const { createInterface: readline } = require('readline');
-const { inspect } = require('util');
-const { createReadStream, writeFileSync, readFileSync } = require('fs');
+import { createInterface as readline } from 'node:readline';
+import { inspect } from 'node:util';
+import { createReadStream, writeFileSync, readFileSync } from 'node:fs';
 
-const get = require('lodash/get'); // eslint-disable-line import/no-extraneous-dependencies
-const words = require('lodash/words'); // eslint-disable-line import/no-extraneous-dependencies
+import get from 'lodash/get.js'; // eslint-disable-line import/no-extraneous-dependencies
+import words from 'lodash/words.js'; // eslint-disable-line import/no-extraneous-dependencies
 
-const docs = require('../lib/helpers/docs');
-const values = require('../lib/helpers/defaults')();
+import { defaults } from '../lib/helpers/defaults.js';
+import login from '../lib/helpers/interaction_policy/prompts/login.js';
+import consent from '../lib/helpers/interaction_policy/prompts/consent.js';
 
-for (const [key, value] of Object.entries(values.ttl)) { // eslint-disable-line no-restricted-syntax
+for (const [key, value] of Object.entries(defaults.ttl)) {
   if (['RefreshToken', 'ClientCredentials', 'AccessToken', 'BackchannelAuthenticationRequest'].includes(key)) {
     value[inspect.custom] = () => (
       value.toString()
@@ -31,12 +32,12 @@ for (const [key, value] of Object.entries(values.ttl)) { // eslint-disable-line 
   }
 }
 
-values.interactions.policy[inspect.custom] = () => `[
+defaults.interactions.policy[inspect.custom] = () => `[
 /* LOGIN PROMPT */
-${require('../lib/helpers/interaction_policy/prompts/login').toString().replace('() => new Prompt', 'new Prompt')}
+${login.toString().replace('() => new Prompt', 'new Prompt')}
 
 /* CONSENT PROMPT */
-${require('../lib/helpers/interaction_policy/prompts/consent').toString().replace('() => new Prompt', 'new Prompt')}
+${consent.toString().replace('() => new Prompt', 'new Prompt')}
 ]`;
 
 function capitalizeSentences(copy) {
@@ -54,10 +55,6 @@ class Block {
 
       if (buffer.indexOf('@indent@') === 0) {
         buffer = buffer.slice(10);
-      }
-
-      if (buffer.indexOf('##DOCS') !== -1) {
-        buffer = Buffer.from(buffer.toString().replace(/##DOCS\/(.+)##/g, () => docs(RegExp.$1)));
       }
 
       if (buffer.indexOf('-') === 0 || /^\d+\./.exec(buffer) || buffer.indexOf('```') !== -1 || buffer.indexOf('|') === 0) {
@@ -87,7 +84,20 @@ const props = [
   '@skip',
 ];
 
-(async () => {
+let mid = Buffer.from('');
+
+function append(what) {
+  mid = Buffer.concat([mid, Buffer.from(what)]);
+}
+
+function expand(what) {
+  what = `\`\`\`js\n${what}\n\`\`\`\n`;
+
+  append('\n_**default value**_:\n');
+  return what;
+}
+
+try {
   const blocks = {};
   await new Promise((resolve, reject) => {
     const read = readline({ input: createReadStream('./lib/helpers/defaults.js') });
@@ -140,6 +150,12 @@ const props = [
               .map((e) => parseInt(e.slice(-1), 10) || 0));
             override = `example${i + 1}`;
           }
+          if (prop === 'recommendation' && option.recommendation) {
+            const i = Math.max(...Object.keys(option)
+              .filter((p) => p.startsWith('recommendation'))
+              .map((e) => parseInt(e.slice(-1), 10) || 0));
+            override = `recommendation${i + 1}`;
+          }
           option.active = override || prop;
           option.write(line.slice(prop.length + 4));
           return true;
@@ -155,7 +171,7 @@ const props = [
         return;
       }
 
-      if (option && option.active) {
+      if (option?.active) {
         option.write(line);
       }
     });
@@ -166,19 +182,6 @@ const props = [
 
     read.on('error', reject);
   });
-
-  let mid = Buffer.from('');
-
-  function append(what) {
-    mid = Buffer.concat([mid, Buffer.from(what)]);
-  }
-
-  function expand(what) {
-    what = `\`\`\`js\n${what}\n\`\`\`\n`;
-
-    append('\n_**default value**_:\n');
-    return what;
-  }
 
   const jwa = [];
   let featuresIdx = 0;
@@ -213,7 +216,9 @@ const props = [
 
   let hidden;
   let prev;
-  for (const block of [...adapter, ...clients, ...findAccount, ...jwks, ...features, ...configuration, ...jwa]) { // eslint-disable-line no-restricted-syntax, max-len
+  for (const block of [
+    ...adapter, ...clients, ...findAccount, ...jwks, ...features, ...configuration, ...jwa,
+  ]) {
     const section = blocks[block];
 
     if ('@skip' in section) {
@@ -253,14 +258,12 @@ const props = [
       append(`${capitalizeSentences(section.description.join(' '))}  \n\n`);
     }
 
-    ['recommendation'].forEach((option) => {
-      if (section[option]) {
-        append(`_**${option}**_: ${section[option].join(' ')}  \n\n`);
-      }
+    Object.keys(section).filter((x) => x.startsWith('recommendation')).forEach((prop) => {
+      append(`_**recommendation**_: ${section[prop].join(' ')}  \n\n`);
     });
 
     if (!('@nodefault' in section)) {
-      const value = get(values, block);
+      const value = get(defaults, block);
       switch (typeof value) {
         case 'boolean':
         case 'number':
@@ -331,7 +334,7 @@ const props = [
 
       const parts = [];
       let incode;
-      for (const line of content) { // eslint-disable-line no-restricted-syntax
+      for (const line of content) {
         const backticks = line.indexOf('```') !== -1;
         if (incode) {
           parts[parts.length - 1].push(line);
@@ -373,7 +376,7 @@ const props = [
   const post = conf.slice(conf.indexOf(comEnd));
 
   writeFileSync('./docs/README.md', Buffer.concat([pre, mid, post]));
-})().catch((err) => {
+} catch (err) {
   console.error(err); // eslint-disable-line no-console
   process.exitCode = 1;
-});
+}

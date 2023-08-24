@@ -1,23 +1,28 @@
-const { readFileSync } = require('fs');
+import { createPrivateKey, X509Certificate } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
-const got = require('got');
-const nock = require('nock');
-const jose = require('jose2');
-const { importJWK } = require('jose');
-const sinon = require('sinon');
-const { expect } = require('chai');
-const cloneDeep = require('lodash/cloneDeep');
+import got from 'got'; // eslint-disable-line import/no-unresolved
+import nock from 'nock';
+import { importJWK } from 'jose';
+import sinon from 'sinon';
+import { expect } from 'chai';
+import cloneDeep from 'lodash/cloneDeep.js';
 
-const nanoid = require('../../lib/helpers/nanoid');
-const { Provider } = require('../../lib');
-const bootstrap = require('../test_helper');
-const clientKey = require('../client.sig.key');
-const JWT = require('../../lib/helpers/jwt');
-const { JWA } = require('../../lib/consts');
-const mtlsKeys = require('../jwks/jwks.json');
+import nanoid from '../../lib/helpers/nanoid.js';
+import Provider from '../../lib/index.js';
+import bootstrap from '../test_helper.js';
+import clientKey from '../client.sig.key.js';
+import * as JWT from '../../lib/helpers/jwt.js';
+import { JWA } from '../../lib/consts/index.js';
 
-const rsacrt = readFileSync('test/jwks/rsa.crt').toString();
-const eccrt = readFileSync('test/jwks/ec.crt').toString();
+const mtlsKeys = JSON.parse(
+  readFileSync('test/jwks/jwks.json', {
+    encoding: 'utf-8',
+  }),
+);
+
+const rsacrt = new X509Certificate(readFileSync('test/jwks/rsa.crt', { encoding: 'ascii' }));
+const eccrt = new X509Certificate(readFileSync('test/jwks/ec.crt', { encoding: 'ascii' }));
 
 const route = '/token';
 
@@ -37,7 +42,7 @@ function errorDetail(spy) {
 }
 
 describe('client authentication options', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   before(function () {
     this.provider.registerGrantType('foo', (ctx) => {
@@ -48,21 +53,19 @@ describe('client authentication options', () => {
   describe('discovery', () => {
     it('pushes no algs when neither _jwt method is enabled', () => {
       const provider = new Provider('http://localhost', {
-        tokenEndpointAuthMethods: [
+        clientAuthMethods: [
           'none',
           'client_secret_basic',
           'client_secret_post',
         ],
       });
 
-      expect(i(provider).configuration('tokenEndpointAuthSigningAlgValues')).to.be.undefined;
-      expect(i(provider).configuration('introspectionEndpointAuthSigningAlgValues')).to.be.undefined;
-      expect(i(provider).configuration('revocationEndpointAuthSigningAlgValues')).to.be.undefined;
+      expect(i(provider).configuration('clientAuthSigningAlgValues')).to.be.undefined;
     });
 
     it('removes client_secret_jwt when no HMAC based alg is enabled', () => {
       const provider = new Provider('http://localhost', {
-        tokenEndpointAuthMethods: [
+        clientAuthMethods: [
           'none',
           'client_secret_jwt',
           'private_key_jwt',
@@ -70,16 +73,16 @@ describe('client authentication options', () => {
           'client_secret_post',
         ],
         enabledJWA: {
-          tokenEndpointAuthSigningAlgValues: ['PS256'],
+          clientAuthSigningAlgValues: ['PS256'],
         },
       });
 
-      expect(i(provider).configuration('tokenEndpointAuthMethods')).not.to.include('client_secret_jwt');
+      expect(i(provider).configuration('clientAuthMethods')).not.to.include('client_secret_jwt');
     });
 
     it('removes private_key_jwt when no public key crypto based alg is enabled', () => {
       const provider = new Provider('http://localhost', {
-        tokenEndpointAuthMethods: [
+        clientAuthMethods: [
           'none',
           'client_secret_jwt',
           'private_key_jwt',
@@ -87,22 +90,22 @@ describe('client authentication options', () => {
           'client_secret_post',
         ],
         enabledJWA: {
-          tokenEndpointAuthSigningAlgValues: ['HS256'],
+          clientAuthSigningAlgValues: ['HS256'],
         },
       });
 
-      expect(i(provider).configuration('tokenEndpointAuthMethods')).not.to.include('private_key_jwt');
+      expect(i(provider).configuration('clientAuthMethods')).not.to.include('private_key_jwt');
     });
 
     it('pushes only symmetric algs when client_secret_jwt is enabled', () => {
       const provider = new Provider('http://localhost', {
-        tokenEndpointAuthMethods: [
+        clientAuthMethods: [
           'none',
           'client_secret_basic',
           'client_secret_jwt',
           'client_secret_post',
         ],
-        enabledJWA: cloneDeep(JWA),
+        enabledJWA: cloneDeep({ ...JWA }),
       });
 
       const algs = [
@@ -111,20 +114,18 @@ describe('client authentication options', () => {
         'HS512',
       ];
 
-      expect(i(provider).configuration('tokenEndpointAuthSigningAlgValues')).to.eql(algs);
-      expect(i(provider).configuration('introspectionEndpointAuthSigningAlgValues')).to.eql(algs);
-      expect(i(provider).configuration('revocationEndpointAuthSigningAlgValues')).to.eql(algs);
+      expect(i(provider).configuration('clientAuthSigningAlgValues')).to.eql(algs);
     });
 
     it('pushes only asymmetric algs when private_key_jwt is enabled', () => {
       const provider = new Provider('http://localhost', {
-        tokenEndpointAuthMethods: [
+        clientAuthMethods: [
           'none',
           'client_secret_basic',
           'client_secret_post',
           'private_key_jwt',
         ],
-        enabledJWA: cloneDeep(JWA),
+        enabledJWA: cloneDeep({ ...JWA }),
       });
 
       const algs = [
@@ -141,21 +142,19 @@ describe('client authentication options', () => {
         'EdDSA',
       ];
 
-      expect(i(provider).configuration('tokenEndpointAuthSigningAlgValues')).to.eql(algs);
-      expect(i(provider).configuration('introspectionEndpointAuthSigningAlgValues')).to.eql(algs);
-      expect(i(provider).configuration('revocationEndpointAuthSigningAlgValues')).to.eql(algs);
+      expect(i(provider).configuration('clientAuthSigningAlgValues')).to.eql(algs);
     });
 
     it('pushes all algs when both _jwt methods are enabled', () => {
       const provider = new Provider('http://localhost', {
-        tokenEndpointAuthMethods: [
+        clientAuthMethods: [
           'none',
           'client_secret_basic',
           'client_secret_jwt',
           'client_secret_post',
           'private_key_jwt',
         ],
-        enabledJWA: cloneDeep(JWA),
+        enabledJWA: cloneDeep({ ...JWA }),
       });
 
       const algs = [
@@ -175,9 +174,7 @@ describe('client authentication options', () => {
         'EdDSA',
       ];
 
-      expect(i(provider).configuration('tokenEndpointAuthSigningAlgValues')).to.eql(algs);
-      expect(i(provider).configuration('introspectionEndpointAuthSigningAlgValues')).to.eql(algs);
-      expect(i(provider).configuration('revocationEndpointAuthSigningAlgValues')).to.eql(algs);
+      expect(i(provider).configuration('clientAuthSigningAlgValues')).to.eql(algs);
     });
   });
 
@@ -227,7 +224,7 @@ describe('client authentication options', () => {
         .type('form')
         .expect(() => {
           expect(spy.calledOnce).to.be.true;
-          expect(errorDetail(spy)).to.equal('the registered client token_endpoint_auth_method does not match the provided auth mechanism');
+          expect(errorDetail(spy)).to.equal('the provided authentication mechanism does not match the registered client authentication method');
         })
         .expect(401)
         .expect(tokenAuthRejected);
@@ -501,7 +498,7 @@ describe('client authentication options', () => {
         .type('form')
         .expect(() => {
           expect(spy.calledOnce).to.be.true;
-          expect(errorDetail(spy)).to.equal('the registered client token_endpoint_auth_method does not match the provided auth mechanism');
+          expect(errorDetail(spy)).to.equal('the provided authentication mechanism does not match the registered client authentication method');
         })
         .expect(401)
         .expect(tokenAuthRejected);
@@ -662,7 +659,7 @@ describe('client authentication options', () => {
         .expect(tokenAuthRejected)
         .expect(() => {
           expect(spy.calledOnce).to.be.true;
-          expect(errorDetail(spy)).to.equal('the registered client token_endpoint_auth_method does not match the provided auth mechanism');
+          expect(errorDetail(spy)).to.equal('the provided authentication mechanism does not match the registered client authentication method');
         }));
     });
 
@@ -1031,7 +1028,7 @@ describe('client authentication options', () => {
         sub: 'client-jwt-secret',
         iss: 'client-jwt-secret',
       }, this.key, 'HS256', {
-        expiresIn: -1,
+        expiresIn: -300,
       }).then((assertion) => this.agent.post(route)
         .send({
           client_assertion: assertion,
@@ -1143,11 +1140,7 @@ describe('client authentication options', () => {
   });
 
   describe('private_key_jwt auth', () => {
-    let privateKey;
-
-    before(() => {
-      privateKey = jose.JWK.asKey(clientKey);
-    });
+    const privateKey = createPrivateKey({ format: 'jwk', key: clientKey });
 
     after(function () {
       i(this.provider).configuration().clockTolerance = 0;
@@ -1159,7 +1152,7 @@ describe('client authentication options', () => {
         aud: this.provider.issuer + this.suitePath('/token'),
         sub: 'client-jwt-key',
         iss: 'client-jwt-key',
-      }, privateKey.keyObject, 'RS256', {
+      }, privateKey, 'RS256', {
         expiresIn: 60,
       }).then((assertion) => this.agent.post(route)
         .send({
@@ -1179,7 +1172,7 @@ describe('client authentication options', () => {
         sub: 'client-jwt-key',
         iss: 'client-jwt-key',
         iat: Math.ceil(Date.now() / 1000) + 5,
-      }, privateKey.keyObject, 'RS256', {
+      }, privateKey, 'RS256', {
         expiresIn: 60,
       }).then((assertion) => this.agent.post(route)
         .send({
@@ -1195,7 +1188,7 @@ describe('client authentication options', () => {
   describe('tls_client_auth auth', () => {
     it('accepts the auth', function () {
       return this.agent.post(route)
-        .set('x-ssl-client-cert', rsacrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', rsacrt.raw.toString('base64'))
         .set('x-ssl-client-verify', 'SUCCESS')
         .set('x-ssl-client-san-dns', 'rp.example.com')
         .send({
@@ -1219,7 +1212,7 @@ describe('client authentication options', () => {
 
     it('fails the auth when certificateAuthorized() fails', function () {
       return this.agent.post(route)
-        .set('x-ssl-client-cert', rsacrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', rsacrt.raw.toString('base64'))
         .set('x-ssl-client-verify', 'FAILED: self signed certificate')
         .set('x-ssl-client-san-dns', 'rp.example.com')
         .send({
@@ -1232,7 +1225,7 @@ describe('client authentication options', () => {
 
     it('fails the auth when certificateSubjectMatches() return false', function () {
       return this.agent.post(route)
-        .set('x-ssl-client-cert', rsacrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', rsacrt.raw.toString('base64'))
         .set('x-ssl-client-verify', 'SUCCESS')
         .set('x-ssl-client-san-dns', 'foobarbaz')
         .send({
@@ -1247,7 +1240,7 @@ describe('client authentication options', () => {
   describe('self_signed_tls_client_auth auth', () => {
     it('accepts the auth [1/2]', function () {
       return this.agent.post(route)
-        .set('x-ssl-client-cert', rsacrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', rsacrt.raw.toString('base64'))
         .send({
           client_id: 'client-self-signed-mtls',
           grant_type: 'foo',
@@ -1259,7 +1252,7 @@ describe('client authentication options', () => {
 
     it('accepts the auth [2/2]', function () {
       return this.agent.post(route)
-        .set('x-ssl-client-cert', eccrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', eccrt.raw.toString('base64'))
         .send({
           client_id: 'client-self-signed-mtls',
           grant_type: 'foo',
@@ -1281,7 +1274,7 @@ describe('client authentication options', () => {
 
     it('fails the auth when x-ssl-client-cert does not match the registered ones', function () {
       return this.agent.post(route)
-        .set('x-ssl-client-cert', eccrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', eccrt.raw.toString('base64'))
         .send({
           client_id: 'client-self-signed-mtls-rsa',
           grant_type: 'foo',
@@ -1296,7 +1289,7 @@ describe('client authentication options', () => {
         .reply(200, JSON.stringify(mtlsKeys));
 
       return this.agent.post(route)
-        .set('x-ssl-client-cert', rsacrt.replace(RegExp('\\r?\\n', 'g'), ''))
+        .set('x-ssl-client-cert', rsacrt.raw.toString('base64'))
         .send({
           client_id: 'client-self-signed-mtls-jwks_uri',
           grant_type: 'foo',

@@ -1,14 +1,14 @@
 /* eslint-disable no-underscore-dangle */
 
-const { parse: parseLocation } = require('url');
+import { parse as parseLocation } from 'node:url';
 
-const { expect } = require('chai');
+import { expect } from 'chai';
 
-const bootstrap = require('../test_helper');
-const { decode: decodeJWT } = require('../../lib/helpers/jwt');
+import bootstrap from '../test_helper.js';
+import { decode as decodeJWT } from '../../lib/helpers/jwt.js';
 
 describe('distributed and aggregated claims', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
   before(function () {
     const { Account } = this.provider;
     Account.findAccount = (ctx, id) => Promise.resolve({
@@ -92,7 +92,7 @@ describe('distributed and aggregated claims', () => {
           const { query: { access_token } } = parseLocation(authorization.headers.location, true);
 
           return this.agent.get('/me')
-            .query({ access_token })
+            .auth(access_token, { type: 'bearer' })
             .expect(200)
             .end((userinfoError, userinfo) => {
               if (userinfoError) return done(userinfoError);
@@ -127,7 +127,7 @@ describe('distributed and aggregated claims', () => {
           const { query: { access_token } } = parseLocation(authorization.headers.location, true);
 
           return this.agent.get('/me')
-            .query({ access_token })
+            .auth(access_token, { type: 'bearer' })
             .expect(200)
             .end((userinfoError, userinfo) => {
               if (userinfoError) return done(userinfoError);

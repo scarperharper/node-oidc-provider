@@ -1,13 +1,13 @@
-const { expect } = require('chai');
-const sinon = require('sinon');
+import { expect } from 'chai';
+import sinon from 'sinon';
 
-const bootstrap = require('../test_helper');
-const safe = require('../../lib/helpers/html_safe');
+import bootstrap from '../test_helper.js';
+import safe from '../../lib/helpers/html_safe.js';
 
 const route = '/auth';
 
 describe('/auth', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   ['get', 'post'].forEach((verb) => {
     describe(`${verb} response_mode=form_post`, () => {
@@ -62,7 +62,7 @@ describe('/auth', () => {
             .expect(() => {
               expect(spy.called).to.be.true;
             })
-            .expect(new RegExp('input type="hidden" name="error" value="login_required"'))
+            .expect(/input type="hidden" name="error" value="login_required"/)
             .expect(new RegExp(`input type="hidden" name="state" value="${auth.state}"`))
             .expect(new RegExp(`form method="post" action="${auth.redirect_uri}"`));
         });

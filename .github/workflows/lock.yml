@@ -2,13 +2,15 @@ name: 'Lock threads'
 
 on:
   schedule:
-    - cron: '10 9 * * *'
+    - cron: '55 11 * * 1'
 
 jobs:
   lock:
+    if: ${{ github.repository == 'panva/node-oidc-provider' }}
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
-      - uses: dessant/lock-threads@v3
+      - uses: dessant/lock-threads@be8aa5be94131386884a6da4189effda9b14aa21 # v4.0.1
         with:
           github-token: ${{ github.token }}
           issue-inactive-days: '90'

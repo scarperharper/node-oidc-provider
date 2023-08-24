@@ -1,22 +1,21 @@
 /* eslint-disable no-underscore-dangle */
 
-const { parse: parseLocation } = require('url');
+import { parse as parseLocation } from 'node:url';
 
-const get = require('lodash/get');
-const { expect } = require('chai');
-const KeyGrip = require('keygrip'); // eslint-disable-line import/no-extraneous-dependencies
+import get from 'lodash/get.js';
+import { expect } from 'chai';
+import KeyGrip from 'keygrip'; // eslint-disable-line import/no-extraneous-dependencies
 
-const { decode: decodeJWT } = require('../../lib/helpers/jwt');
-const bootstrap = require('../test_helper');
+import { decode as decodeJWT } from '../../lib/helpers/jwt.js';
+import bootstrap from '../test_helper.js';
 
 const route = '/auth';
 const expire = new Date();
 
 expire.setDate(expire.getDate() + 1);
-
 ['get', 'post'].forEach((verb) => {
   describe(`claimsParameter via ${verb} ${route}`, () => {
-    before(bootstrap(__dirname));
+    before(bootstrap(import.meta.url));
 
     describe('specify id_token', () => {
       before(function () {
@@ -145,7 +144,7 @@ expire.setDate(expire.getDate() + 1);
             const { query: { access_token } } = parseLocation(response.headers.location, true);
             return this.agent
               .get('/me')
-              .query({ access_token })
+              .auth(access_token, { type: 'bearer' })
               .expect(200)
               .expect(({ body }) => {
                 expect(body).to.contain.keys('email', 'middle_name');
@@ -199,7 +198,7 @@ expire.setDate(expire.getDate() + 1);
             const { query: { access_token } } = parseLocation(response.headers.location, true);
             this.agent
               .get('/me')
-              .query({ access_token })
+              .auth(access_token, { type: 'bearer' })
               .expect(200)
               .expect((userinfo) => {
                 expect(userinfo.body).to.contain.key('given_name');

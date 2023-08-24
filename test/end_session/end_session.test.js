@@ -1,17 +1,19 @@
-const { parse: parseUrl } = require('url');
+import { parse as parseUrl } from 'node:url';
 
-const sinon = require('sinon').createSandbox();
-const { expect } = require('chai');
-const timekeeper = require('timekeeper');
+import { createSandbox } from 'sinon';
+import { expect } from 'chai';
+import timekeeper from 'timekeeper';
 
-const bootstrap = require('../test_helper');
-const JWT = require('../../lib/helpers/jwt');
-const { InvalidClient, InvalidRequest } = require('../../lib/helpers/errors');
+import bootstrap from '../test_helper.js';
+import * as JWT from '../../lib/helpers/jwt.js';
+import { InvalidClient, InvalidRequest } from '../../lib/helpers/errors.js';
+
+const sinon = createSandbox();
 
 const route = '/session/end';
 
 describe('logout endpoint', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
   afterEach(() => timekeeper.reset());
 
   describe('when logged out', () => {
@@ -262,28 +264,17 @@ describe('logout endpoint', () => {
                 expect(postLogoutRedirectUri).to.be.undefined;
               });
           });
-        });
 
-        it('without id_token_hint or client_id post_logout_redirect_uri may not be provided', function () {
-          const emitSpy = sinon.spy();
-          const renderSpy = sinon.spy(i(this.provider).configuration(), 'renderError');
-          this.provider.once('end_session.error', emitSpy);
-          const params = {
-            post_logout_redirect_uri: 'https://client.example.com/callback/logout',
-          };
+          it('ignores unverified post_logout_redirect_uri', function () {
+            const params = { post_logout_redirect_uri: 'https://client.example.com/logout/cb' };
 
-          return this.agent.get(route)
-            .set('Accept', 'text/html')
-            .query(params)
-            .expect(400)
-            .expect(() => {
-              expect(emitSpy.calledOnce).to.be.true;
-              expect(renderSpy.calledOnce).to.be.true;
-              const renderArgs = renderSpy.args[0];
-              expect(renderArgs[1]).to.have.property('error', 'invalid_request');
-              expect(renderArgs[1]).to.have.property('error_description', 'post_logout_redirect_uri can only be used in combination with id_token_hint or client_id');
-              expect(renderArgs[2]).to.be.an.instanceof(InvalidRequest);
-            });
+            return this.wrap({ route, verb, params })
+              .expect(200)
+              .expect(() => {
+                const { state: { postLogoutRedirectUri } } = this.getSession();
+                expect(postLogoutRedirectUri).to.be.undefined;
+              });
+          });
         });
 
         it('validates post_logout_redirect_uri allowed on client', function () {
@@ -339,7 +330,7 @@ describe('logout endpoint', () => {
             id_token_hint: await JWT.sign({
               aud: 'nonexistant',
               iss: this.provider.issuer,
-            }, null, 'none'),
+            }, Buffer.from('secret'), 'HS256'),
           };
 
           return this.agent.get(route)
@@ -364,7 +355,7 @@ describe('logout endpoint', () => {
             id_token_hint: await JWT.sign({
               aud: 'client',
               iss: this.provider.issuer,
-            }, null, 'none'),
+            }, Buffer.from('not THE secret'), 'HS256'),
           };
 
           return this.agent.get(route)

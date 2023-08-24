@@ -84,6 +84,9 @@ class MyAdapter {
      *     from authnz to be returned to the polling client
      * - policies {string[]} - [InitialAccessToken, RegistrationAccessToken only] array of policies
      * - request {string} - [PushedAuthorizationRequest only] Pushed Request Object value
+     * - dpopJkt {string} - [PushedAuthorizationRequest only] Calculated or provided dpop_jkt parameter
+     * - trusted {boolean} - [PushedAuthorizationRequest only] Whether the parameters in the PAR object
+     *     were coming from an authenticated request or an authenticated source.
      *
      * Client model will only use this when registered through Dynamic Registration features and
      * will contain all client properties.
@@ -137,6 +140,7 @@ class MyAdapter {
      * - trusted {string[]} - parameter names that come from a trusted source
      * - result {object} - interaction results object is expected here
      * - grantId {string} - grant identifier if there's a preexisting one
+     * - cid {string} - correlating identifier for the Authorization request
      * - session {object}
      * - session.uid {string} - uid of the session this Interaction belongs to
      * - session.cookie {string} - jti of the session this Interaction belongs to
@@ -239,4 +243,4 @@ class MyAdapter {
   }
 }
 
-module.exports = MyAdapter;
+export default MyAdapter;

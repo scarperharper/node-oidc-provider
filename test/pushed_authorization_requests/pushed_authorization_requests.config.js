@@ -1,9 +1,8 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import merge from 'lodash/merge.js';
 
-const config = cloneDeep(require('../default.config'));
+import getConfig from '../default.config.js';
 
-config.enabledJWA.requestObjectSigningAlgValues = config.enabledJWA.requestObjectSigningAlgValues.filter((alg) => alg !== 'none');
+const config = getConfig();
 
 merge(config.features, {
   pushedAuthorizationRequests: {
@@ -16,7 +15,7 @@ merge(config.features, {
   },
 });
 
-module.exports = {
+export default {
   config,
   clients: [{
     client_id: 'client',

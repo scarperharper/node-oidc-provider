@@ -1,7 +1,8 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import merge from 'lodash/merge.js';
 
-const config = cloneDeep(require('../default.config'));
+import getConfig from '../default.config.js';
+
+const config = getConfig();
 
 merge(config.features, {
   introspection: { enabled: true },
@@ -9,7 +10,7 @@ merge(config.features, {
   encryption: { enabled: true },
 });
 
-module.exports = {
+export default {
   config,
   clients: [{
     client_id: 'client-signed',
@@ -21,15 +22,15 @@ module.exports = {
     client_id: 'client-HS-expired',
     client_secret: 'secret',
     client_secret_expires_at: 1,
-    introspection_endpoint_auth_method: 'none',
+    token_endpoint_auth_method: 'none',
     introspection_signed_response_alg: 'HS256',
     redirect_uris: ['https://client.example.com/cb'],
   },
   {
     client_id: 'client-encrypted',
     client_secret: 'secret',
-    introspection_endpoint_auth_method: 'none',
-    introspection_encrypted_response_alg: 'PBES2-HS256+A128KW',
+    token_endpoint_auth_method: 'none',
+    introspection_encrypted_response_alg: 'A128KW',
     redirect_uris: ['https://client.example.com/cb'],
   }],
 };

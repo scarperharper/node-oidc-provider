@@ -1,14 +1,14 @@
-const { expect } = require('chai');
-const timekeeper = require('timekeeper');
+import { expect } from 'chai';
+import timekeeper from 'timekeeper';
 
-const bootstrap = require('../test_helper');
-const JWT = require('../../lib/helpers/jwt');
-const { Provider } = require('../../lib');
+import bootstrap from '../test_helper.js';
+import * as JWT from '../../lib/helpers/jwt.js';
+import Provider from '../../lib/index.js';
 
 const route = '/token/introspection';
 
 describe('jwtIntrospection features', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   afterEach(() => timekeeper.reset());
 
@@ -170,7 +170,7 @@ describe('jwtIntrospection features', () => {
         .expect('content-type', 'application/token-introspection+jwt; charset=utf-8')
         .expect(({ text }) => {
           const header = JWT.header(text);
-          expect(header).to.have.property('alg', 'PBES2-HS256+A128KW');
+          expect(header).to.have.property('alg', 'A128KW');
           expect(header).to.have.property('enc', 'A128CBC-HS256');
         });
     });

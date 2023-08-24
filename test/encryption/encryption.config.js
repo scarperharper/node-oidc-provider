@@ -1,9 +1,10 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
-const pull = require('lodash/pull');
-const jose = require('jose2');
+import { generateKeyPair } from 'jose';
+import merge from 'lodash/merge.js';
+import pull from 'lodash/pull.js';
 
-const config = cloneDeep(require('../default.config'));
+import getConfig from '../default.config.js';
+
+const config = getConfig();
 
 merge(config.features, {
   requestObjects: { request: true },
@@ -14,22 +15,13 @@ merge(config.features, {
   pushedAuthorizationRequests: { enabled: true },
 });
 
-pull(config.enabledJWA.requestObjectEncryptionAlgValues, 'RSA-OAEP');
+pull(config.enabledJWA.requestObjectEncryptionAlgValues, 'RSA-OAEP-512');
 pull(config.enabledJWA.requestObjectEncryptionEncValues, 'A192CBC-HS384');
 
-const k = jose.JWK.generateSync('RSA', 2048);
+export const keypair = await generateKeyPair('RS256');
 
-const privKey = {
-  keys: [k.toJWK(true)],
-};
-
-const pubKey = {
-  keys: [k.toJWK(false)],
-};
-
-module.exports = {
+export default {
   config,
-  privKey,
   clients: [
     {
       client_id: 'client',
@@ -37,12 +29,13 @@ module.exports = {
       redirect_uris: ['https://client.example.com/cb'],
       response_types: ['id_token token', 'code'],
       grant_types: ['implicit', 'authorization_code'],
-      jwks: pubKey,
-      id_token_encrypted_response_alg: 'RSA1_5',
+      jwks: { keys: [keypair.publicKey.export({ format: 'jwk' })] },
+      id_token_encrypted_response_alg: 'RSA-OAEP',
       // id_token_encrypted_response_enc: 'A128CBC-HS256',
-      request_object_encryption_alg: 'RSA1_5',
+      request_object_encryption_alg: 'RSA-OAEP',
       // request_object_encryption_enc: 'A128CBC-HS256',
-      userinfo_encrypted_response_alg: 'RSA1_5',
+      userinfo_signed_response_alg: 'RS256',
+      userinfo_encrypted_response_alg: 'RSA-OAEP',
       // userinfo_encrypted_response_enc: 'A128CBC-HS256',
     },
     {
@@ -51,7 +44,7 @@ module.exports = {
       redirect_uris: ['https://client.example.com/cb'],
       response_types: ['id_token'],
       grant_types: ['implicit'],
-      id_token_encrypted_response_alg: 'PBES2-HS384+A192KW',
+      id_token_encrypted_response_alg: 'A128KW',
     },
     {
       client_id: 'clientSymmetric-expired',
@@ -60,7 +53,7 @@ module.exports = {
       response_types: ['id_token'],
       grant_types: ['implicit'],
       client_secret_expires_at: 1,
-      id_token_encrypted_response_alg: 'PBES2-HS384+A192KW',
+      id_token_encrypted_response_alg: 'A128KW',
     },
     {
       client_id: 'clientSymmetric-dir',

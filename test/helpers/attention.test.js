@@ -1,7 +1,7 @@
-const { expect } = require('chai');
+import { expect } from 'chai';
 
-const { captureConsoleInfo, captureConsoleWarn } = require('../capture_output');
-const attention = require('../../lib/helpers/attention');
+import { captureConsoleInfo, captureConsoleWarn } from '../capture_output.js';
+import * as attention from '../../lib/helpers/attention.js';
 
 describe('attention helper', () => {
   context('not in a TTY', () => {

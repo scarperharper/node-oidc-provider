@@ -1,10 +1,10 @@
 /* eslint-disable no-param-reassign */
 
-const { expect } = require('chai');
-const sinon = require('sinon');
+import { expect } from 'chai';
+import sinon from 'sinon';
 
-const { Provider } = require('../../lib');
-const { InvalidClientMetadata } = require('../../lib/helpers/errors');
+import Provider from '../../lib/index.js';
+import { InvalidClientMetadata } from '../../lib/helpers/errors.js';
 
 describe('extraClientMetadata configuration', () => {
   it('allows for properties to be added to client schema and have them synchronously validated', async () => {
@@ -96,6 +96,33 @@ describe('extraClientMetadata configuration', () => {
 
     const client = await provider.Client.find('client');
     expect(client).not.to.have.property('foo');
+  });
+
+  it('should not allow to update the client so that its invalid', async () => {
+    const provider = new Provider('http://localhost:3000', {
+      extraClientMetadata: {
+        properties: ['foo'],
+        validator(ctx, key, value, metadata) {
+          metadata.client_secret = undefined;
+        },
+      },
+      clients: [
+        {
+          client_id: 'client',
+          client_secret: 'bar',
+          token_endpoint_auth_method: 'client_secret_basic',
+          redirect_uris: ['http://rp.example.com/cb'],
+        },
+      ],
+    });
+
+    try {
+      await provider.Client.find('client');
+      throw new Error('expected a throw from the above');
+    } catch (err) {
+      expect(err).to.have.property('message', 'invalid_client_metadata');
+      expect(err).to.have.property('error_description', 'client_secret is mandatory property');
+    }
   });
 
   it('can be used to add validations to existing standard properties', async () => {

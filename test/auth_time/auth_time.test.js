@@ -1,13 +1,13 @@
-const url = require('url');
+import * as url from 'node:url';
 
-const sinon = require('sinon');
-const { JWT: { decode } } = require('jose2');
-const { expect } = require('chai');
+import sinon from 'sinon';
+import { decodeJwt } from 'jose';
+import { expect } from 'chai';
 
-const bootstrap = require('../test_helper');
+import bootstrap from '../test_helper.js';
 
 describe('responds with a id_token containing auth_time', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
   before(function () { return this.login(); });
 
   const response_type = 'id_token';
@@ -32,7 +32,7 @@ describe('responds with a id_token containing auth_time', () => {
         ({ query: { id_token } } = url.parse(response.headers.location, true));
       });
 
-    expect(decode(id_token)).to.have.property('auth_time');
+    expect(decodeJwt(id_token)).to.have.property('auth_time');
   });
 
   context('special cases', () => {
@@ -63,7 +63,7 @@ describe('responds with a id_token containing auth_time', () => {
           ({ query: { id_token } } = url.parse(response.headers.location, true));
         });
 
-      expect(decode(id_token)).to.have.property('auth_time');
+      expect(decodeJwt(id_token)).to.have.property('auth_time');
     });
 
     it('when max_age=0 was requested', async function () {
@@ -85,7 +85,7 @@ describe('responds with a id_token containing auth_time', () => {
           ({ query: { id_token } } = url.parse(response.headers.location, true));
         });
 
-      expect(decode(id_token)).to.have.property('auth_time');
+      expect(decodeJwt(id_token)).to.have.property('auth_time');
     });
   });
 
@@ -108,7 +108,7 @@ describe('responds with a id_token containing auth_time', () => {
         ({ query: { id_token } } = url.parse(response.headers.location, true));
       });
 
-    expect(decode(id_token)).to.have.property('auth_time');
+    expect(decodeJwt(id_token)).to.have.property('auth_time');
   });
 
   it('when client has default_max_age', async function () {
@@ -130,6 +130,6 @@ describe('responds with a id_token containing auth_time', () => {
         ({ query: { id_token } } = url.parse(response.headers.location, true));
       });
 
-    expect(decode(id_token)).to.have.property('auth_time');
+    expect(decodeJwt(id_token)).to.have.property('auth_time');
   });
 });

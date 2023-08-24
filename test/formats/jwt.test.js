@@ -1,16 +1,18 @@
 /* eslint-disable no-shadow */
 /* eslint-disable no-param-reassign */
-const { strict: assert } = require('assert');
-const crypto = require('crypto');
-const util = require('util');
+import { strict as assert } from 'node:assert';
+import * as crypto from 'node:crypto';
+import * as util from 'node:util';
 
-const sinon = require('sinon').createSandbox();
-const { expect } = require('chai');
-const base64url = require('base64url');
+import { createSandbox } from 'sinon';
+import { expect } from 'chai';
+import base64url from 'base64url';
 
-const ResourceServer = require('../../lib/helpers/resource_server');
-const epochTime = require('../../lib/helpers/epoch_time');
-const bootstrap = require('../test_helper');
+import ResourceServer from '../../lib/helpers/resource_server.js';
+import epochTime from '../../lib/helpers/epoch_time.js';
+import bootstrap from '../test_helper.js';
+
+const sinon = createSandbox();
 
 const generateKeyPair = util.promisify(crypto.generateKeyPair);
 function decode(b64urljson) {
@@ -18,7 +20,7 @@ function decode(b64urljson) {
 }
 
 describe('jwt format', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
   afterEach(function () {
     this.provider.removeAllListeners();
   });
@@ -488,7 +490,6 @@ describe('jwt format', () => {
       });
     });
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const prop of ['alg', 'enc', 'key']) {
       // eslint-disable-next-line no-loop-func
       it(`ensures JWE Configuration has ${prop}`, async function () {

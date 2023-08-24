@@ -1,12 +1,12 @@
-const sinon = require('sinon');
-const { expect } = require('chai');
+import sinon from 'sinon';
+import { expect } from 'chai';
 
-const bootstrap = require('../test_helper');
+import bootstrap from '../test_helper.js';
 
 const route = '/token/introspection';
 
 describe('introspection features', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   describe('enriched discovery', () => {
     it('shows the url now', function () {
@@ -301,8 +301,7 @@ describe('introspection features', () => {
         .auth('client', 'secret')
         .send({})
         .type('form')
-        .expect('pragma', 'no-cache')
-        .expect('cache-control', 'no-cache, no-store');
+        .expect('cache-control', 'no-store');
     });
 
     it('validates token param presence', function () {

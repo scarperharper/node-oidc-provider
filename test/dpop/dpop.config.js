@@ -1,14 +1,17 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import merge from 'lodash/merge.js';
 
-const config = cloneDeep(require('../default.config'));
+import getConfig from '../default.config.js';
+
+const config = getConfig();
 
 config.enabledJWA.dPoPSigningAlgValues = ['ES256', 'PS256'];
 merge(config.features, {
-  dPoP: { enabled: true },
+  dPoP: { enabled: true, nonceSecret: Buffer.alloc(32, 0) },
   clientCredentials: { enabled: true },
   introspection: { enabled: true },
   deviceFlow: { enabled: true },
+  pushedAuthorizationRequests: { enabled: true },
+  requestObjects: { request: true },
   ciba: {
     enabled: true,
     processLoginHint(ctx, loginHint) {
@@ -28,7 +31,7 @@ merge(config.features, {
   },
 });
 
-module.exports = {
+export default {
   config,
   clients: [
     {

@@ -1,14 +1,21 @@
-const cloneDeep = require('lodash/cloneDeep');
-const merge = require('lodash/merge');
+import { X509Certificate } from 'node:crypto';
 
-const config = cloneDeep(require('../default.config'));
+import merge from 'lodash/merge.js';
+
+import getConfig from '../default.config.js';
+
+const config = getConfig();
 
 merge(config.features, {
   mTLS: {
     enabled: true,
     certificateBoundAccessTokens: true,
     getCertificate(ctx) {
-      return ctx.get('x-ssl-client-cert');
+      try {
+        return new X509Certificate(Buffer.from(ctx.get('x-ssl-client-cert'), 'base64'));
+      } catch (e) {
+        return undefined;
+      }
     },
   },
   clientCredentials: { enabled: true },
@@ -33,7 +40,7 @@ merge(config.features, {
   },
 });
 
-module.exports = {
+export default {
   config,
   clients: [
     {

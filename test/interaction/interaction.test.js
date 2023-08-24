@@ -1,14 +1,16 @@
 /* eslint-disable no-underscore-dangle */
 
-const { strict: assert } = require('assert');
+import { strict as assert } from 'node:assert';
 
-const { expect } = require('chai');
-const KeyGrip = require('keygrip'); // eslint-disable-line import/no-extraneous-dependencies
-const sinon = require('sinon').createSandbox();
+import { expect } from 'chai';
+import KeyGrip from 'keygrip'; // eslint-disable-line import/no-extraneous-dependencies
+import { createSandbox } from 'sinon';
 
-const nanoid = require('../../lib/helpers/nanoid');
-const bootstrap = require('../test_helper');
-const epochTime = require('../../lib/helpers/epoch_time');
+import nanoid from '../../lib/helpers/nanoid.js';
+import bootstrap from '../test_helper.js';
+import epochTime from '../../lib/helpers/epoch_time.js';
+
+const sinon = createSandbox();
 
 const expire = new Date();
 expire.setDate(expire.getDate() + 1);
@@ -20,7 +22,10 @@ function handlesInteractionSessionErrors() {
       `_interaction=; path=${this.url}; expires=${expired.toGMTString()}; httponly`,
       `_interaction.sig=; path=${this.url}; expires=${expired.toGMTString()}; httponly`,
     ];
-    this.agent._saveCookies.bind(this.agent)({ headers: { 'set-cookie': cookies } });
+    this.agent._saveCookies.bind(this.agent)({
+      request: { url: this.provider.issuer },
+      headers: { 'set-cookie': cookies },
+    });
 
     sinon.spy(this.provider, 'interactionDetails');
 
@@ -45,9 +50,8 @@ function handlesInteractionSessionErrors() {
     });
   });
 }
-
 describe('devInteractions', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
   afterEach(sinon.restore);
 
   context('render login', () => {
@@ -69,7 +73,7 @@ describe('devInteractions', () => {
       return this.agent.get(this.url)
         .expect(200)
         .expect(new RegExp(`action="${this.provider.issuer}${this.url}"`))
-        .expect(new RegExp('name="prompt" value="login"'))
+        .expect(/name="prompt" value="login"/)
         .expect(/Sign-in/);
     });
 
@@ -97,7 +101,7 @@ describe('devInteractions', () => {
       return this.agent.get(this.url)
         .expect(200)
         .expect(new RegExp(`action="${this.provider.issuer}${this.url}"`))
-        .expect(new RegExp('name="prompt" value="consent"'))
+        .expect(/name="prompt" value="consent"/)
         .expect(/Authorize/);
     });
 
@@ -343,14 +347,14 @@ describe('devInteractions', () => {
 });
 
 describe('resume after consent', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
   afterEach(sinon.restore);
 
   function setup(grant, result, sessionData) {
     const cookies = [];
 
     let session;
-    if (result && result.login) {
+    if (result?.login) {
       session = new this.provider.Session({ jti: 'sess', ...sessionData });
     } else {
       session = this.getLastSession();
@@ -382,9 +386,8 @@ describe('resume after consent', () => {
     }
 
     this.agent._saveCookies.bind(this.agent)({
-      headers: {
-        'set-cookie': cookies,
-      },
+      request: { url: this.provider.issuer },
+      headers: { 'set-cookie': cookies },
     });
 
     return Promise.all([

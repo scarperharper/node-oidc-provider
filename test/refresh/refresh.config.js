@@ -1,10 +1,10 @@
-const cloneDeep = require('lodash/cloneDeep');
+import getConfig from '../default.config.js';
 
-const config = cloneDeep(require('../default.config'));
+const config = getConfig();
 
 config.rotateRefreshToken = false;
 
-module.exports = {
+export default {
   config,
   clients: [{
     client_id: 'client',

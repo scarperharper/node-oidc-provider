@@ -1,8 +1,8 @@
-const { expect } = require('chai');
-const sinon = require('sinon');
+import { expect } from 'chai';
+import sinon from 'sinon';
 
-const bootstrap = require('../test_helper');
-const { WebMessageUriMismatch } = require('../../lib/helpers/errors');
+import bootstrap from '../test_helper.js';
+import { WebMessageUriMismatch } from '../../lib/helpers/errors.js';
 
 const route = '/auth';
 const response_type = 'code id_token token';
@@ -10,7 +10,7 @@ const response_mode = 'web_message';
 const scope = 'openid';
 
 describe('configuration features.webMessageResponseMode', () => {
-  before(bootstrap(__dirname));
+  before(bootstrap(import.meta.url));
 
   before(function () {
     this.provider.use(async (ctx, next) => {
@@ -43,8 +43,7 @@ describe('configuration features.webMessageResponseMode', () => {
 
         await this.wrap({ route, auth, verb: 'get' })
           .expect(200)
-          .expect('pragma', 'no-cache')
-          .expect('cache-control', 'no-cache, no-store')
+          .expect('cache-control', 'no-store')
           .expect('content-type', 'text/html; charset=utf-8')
           .expect((response) => {
             expect(response.headers['x-frame-options']).not.to.be.ok;
@@ -76,8 +75,7 @@ describe('configuration features.webMessageResponseMode', () => {
 
         await this.wrap({ route, auth, verb: 'get' })
           .expect(200)
-          .expect('pragma', 'no-cache')
-          .expect('cache-control', 'no-cache, no-store')
+          .expect('cache-control', 'no-store')
           .expect('content-type', 'text/html; charset=utf-8')
           .expect((response) => {
             expect(response.headers['x-frame-options']).not.to.be.ok;
@@ -107,8 +105,7 @@ describe('configuration features.webMessageResponseMode', () => {
 
         await this.wrap({ route, auth, verb: 'get' })
           .expect(200)
-          .expect('pragma', 'no-cache')
-          .expect('cache-control', 'no-cache, no-store')
+          .expect('cache-control', 'no-store')
           .expect('content-type', 'text/html; charset=utf-8')
           .expect((response) => {
             expect(response.headers['x-frame-options']).not.to.be.ok;
@@ -136,8 +133,7 @@ describe('configuration features.webMessageResponseMode', () => {
 
         await this.wrap({ route, auth, verb: 'get' })
           .expect(200)
-          .expect('pragma', 'no-cache')
-          .expect('cache-control', 'no-cache, no-store')
+          .expect('cache-control', 'no-store')
           .expect('content-type', 'text/html; charset=utf-8')
           .expect((response) => {
             expect(response.headers['x-frame-options']).not.to.be.ok;
@@ -269,8 +265,7 @@ describe('configuration features.webMessageResponseMode', () => {
 
         await this.wrap({ route, auth, verb: 'get' })
           .expect(400)
-          .expect('pragma', 'no-cache')
-          .expect('cache-control', 'no-cache, no-store')
+          .expect('cache-control', 'no-store')
           .expect('content-type', 'text/html; charset=utf-8')
           .expect((response) => {
             expect(response.headers['x-frame-options']).not.to.be.ok;

@@ -1,17 +1,15 @@
-const bootstrap = require('../test_helper');
-const base64url = require('../../lib/helpers/base64url');
-const epochTime = require('../../lib/helpers/epoch_time');
+import { SignJWT } from 'jose';
+
+import bootstrap from '../test_helper.js';
+import epochTime from '../../lib/helpers/epoch_time.js';
+
+import { keypair } from './fapi-id2.config.js';
 
 describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2) behaviours', () => {
-  before(bootstrap(__dirname, { config: 'fapi-id2' }));
+  before(bootstrap(import.meta.url, { config: 'fapi-id2' }));
 
   describe('userinfo', () => {
     before(function () { return this.login(); });
-    it('echoes back the x-fapi-interaction-id header', function () {
-      return this.agent.get('/me')
-        .set('X-FAPI-Interaction-Id', 'b2bef873-2fd8-4fcd-943b-caafcd0b1c3b')
-        .expect('x-fapi-interaction-id', 'b2bef873-2fd8-4fcd-943b-caafcd0b1c3b');
-    });
 
     it('does not allow query string bearer token', async function () {
       const at = await new this.provider.AccessToken({
@@ -20,6 +18,7 @@ describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2
         grantId: this.getGrantId(),
         scope: 'openid',
       }).save();
+
       await this.agent.get('/me')
         .query({ access_token: at })
         .expect(this.failWith(400, 'invalid_request', 'access tokens must not be provided via query parameter'));
@@ -58,17 +57,17 @@ describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2
         .expect(303)
         .expect(auth.validateClientLocation)
         .expect(auth.validateError('invalid_request'))
-        .expect(auth.validateErrorDescription('response_mode not allowed for this response_type in FAPI mode'));
+        .expect(auth.validateErrorDescription('requested response_mode not allowed for the requested response_type in FAPI 1.0 ID2'));
     });
 
-    it('requires jwt response mode to be used when id token is not issued by authorization endpoint (JAR)', function () {
-      const request = `${base64url.encode(JSON.stringify({ alg: 'none' }))}.${base64url.encode(JSON.stringify({
+    it('requires jwt response mode to be used when id token is not issued by authorization endpoint (JAR)', async function () {
+      const request = await new SignJWT({
         scope: 'openid',
         client_id: 'client',
         response_type: 'code',
         nonce: 'foo',
         exp: epochTime() + 60,
-      }))}.`;
+      }).setProtectedHeader({ alg: 'ES256' }).sign(keypair.privateKey);
 
       const auth = new this.AuthorizationRequest({
         request,
@@ -84,7 +83,7 @@ describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2
         .expect(303)
         .expect(auth.validateClientLocation)
         .expect(auth.validateError('invalid_request'))
-        .expect(auth.validateErrorDescription('response_mode not allowed for this response_type in FAPI mode'));
+        .expect(auth.validateErrorDescription('requested response_mode not allowed for the requested response_type in FAPI 1.0 ID2'));
     });
   });
 
@@ -92,8 +91,8 @@ describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2
     beforeEach(function () { return this.login(); });
     afterEach(function () { return this.logout(); });
 
-    it('still works', function () {
-      const request = `${base64url.encode(JSON.stringify({ alg: 'none' }))}.${base64url.encode(JSON.stringify({
+    it('still works', async function () {
+      const request = await new SignJWT({
         client_id: 'client',
         iss: 'client',
         scope: 'openid',
@@ -103,7 +102,7 @@ describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2
         aud: this.provider.issuer,
         state: 'foo',
         exp: epochTime() + 60,
-      }))}.`;
+      }).setProtectedHeader({ alg: 'ES256' }).sign(keypair.privateKey);
 
       const auth = new this.AuthorizationRequest({
         request,
@@ -126,13 +125,13 @@ describe('Financial-grade API - Part 2: Read and Write API Security Profile (ID2
         .expect(auth.validateClientLocation);
     });
 
-    it('requires exp to be provided in the Request Object', function () {
-      const request = `${base64url.encode(JSON.stringify({ alg: 'none' }))}.${base64url.encode(JSON.stringify({
+    it('requires exp to be provided in the Request Object', async function () {
+      const request = await new SignJWT({
         client_id: 'client',
         scope: 'openid',
         response_type: 'code id_token',
         nonce: 'foo',
-      }))}.`;
+      }).setProtectedHeader({ alg: 'ES256' }).sign(keypair.privateKey);
 
       const auth = new this.AuthorizationRequest({
         request,
